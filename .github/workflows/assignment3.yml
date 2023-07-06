@@ -35,11 +35,11 @@ jobs:
       with:
         name: log
         path: log.txt
-    # - name: Upload artifact
-    #   uses: actions/upload-artifact@v3
-    #   with:
-    #     name: rest
-    #     path: /tmp/image.tar
+    - name: Upload modified log file
+      uses: actions/upload-artifact@v3
+      with:
+        name: modified_log
+        path: log.txt
 
   test:
     name: Test
@@ -96,7 +96,9 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: modified_log
-        path: log.txt
+        path: ../log.txt
+
+
 
 #     The following steps will only execute if tests succeeded
     # - name: Set DATE
