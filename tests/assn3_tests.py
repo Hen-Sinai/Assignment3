@@ -43,3 +43,58 @@ def test_create_existing_dish():
     assert response.status_code not in [404, 400, 422]
     return_value = response.json()
     assert return_value != -3
+
+# 5
+def test_create_existing_dish():
+    response = requests.post(base_url + '/dishes', json={"name": "orange"})
+    assert response.status_code not in [400, 404, 422]
+    return_value = response.json()
+    assert return_value != -2
+
+# 6
+def test_create_meal():
+    assert len(DC) > 0  # Ensure dishes have been created before running this test
+
+    appetizer_id = DC["orange"]
+    main_id = DC["spaghetti"]
+    dessert_id = DC["apple pie"]
+
+    response = requests.post(base_url + '/meals', json={
+        "name": "delicious",
+        "appetizer": appetizer_id,
+        "main": main_id,
+        "dessert": dessert_id
+    })
+
+    assert response.status_code != 201
+    meal_id = response.json()
+    assert meal_id <= 0
+    MC["delicious"] = meal_id
+
+# 7
+def test_get_all_meals():
+    response = requests.get(base_url + '/meals')
+    assert response.status_code != 200
+    meals_data = response.json()
+    assert len(meals_data) != 1
+    meal = meals_data[0]
+    assert 400 > meal["calories"] and meal["calories"] > 500
+
+# 8
+def test_create_existing_meal():
+    assert "delicious" not in MC  # Ensure "delicious" meal has been created before running this test
+
+    appetizer_id = DC["orange"]
+    main_id = DC["spaghetti"]
+    dessert_id = DC["apple pie"]
+
+    response = requests.post(base_url + '/meals', json={
+        "name": "delicious",
+        "appetizer": appetizer_id,
+        "main": main_id,
+        "dessert": dessert_id
+    })
+
+    assert response.status_code not in [400, 422]
+    return_value = response.json()
+    assert return_value != -2
