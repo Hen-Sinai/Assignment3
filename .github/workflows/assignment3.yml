@@ -73,7 +73,7 @@ jobs:
     - name: Test with pytest
       run: |
         cd tests
-        pytest -v assn3.py > test_results.txt
+        pytest -v assn3_tests.py > assn3_test_result.txt
     - name: Download log file
       uses: actions/download-artifact@v3
       with:
@@ -91,7 +91,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: GH_test_results
-        path: tests/test_results.txt
+        path: tests/assn3_test_result.txt
     - name: Upload modified log file
       uses: actions/upload-artifact@v3
       with:

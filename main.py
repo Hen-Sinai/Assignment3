@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 from flask_restful import Api
 from dish import dishes, dishID, dishName
@@ -13,6 +14,6 @@ api.add_resource(meals, '/meals')
 api.add_resource(mealID, '/meals/<int:id>')
 api.add_resource(mealName, '/meals/<string:name>')
 
-
-if __name__ == '__main__':
-    app.run('0.0.0.0', 8000)
+@app.route('/<path:path>', methods=['GET', 'DELETE'])
+def catch_all(path):
+    return '-1', 400

@@ -1,22 +1,56 @@
-from flask import Flask, request
-from flask_restful import Api, Resource, reqparse
-import pymongo
-import json
-import sys
-import requests
-import os
+from flask import request
+from flask_restful import Resource, reqparse
+from dish import DC
 
-# MongoDB connection details
-# mongo_host = os.getenv('MONGO_HOST', '')
-# mongo_port = int(os.getenv('MONGO_PORT', '27017'))
-# mongo_username = os.getenv('MONGO_USERNAME', '')
-# mongo_password = os.getenv('MONGO_PASSWORD', '')
+class mealCollection:
+    def __init__(self):
+        self.counter = 0
+        self.meals_by_name = {}
+        self.meals_by_id = {}
+        self.dishes = DC.dishes_by_id
 
-client = pymongo.MongoClient("mongodb://mongo:27017/")
-# client = pymongo.MongoClient(host=mongo_host, port=mongo_port, username=mongo_username, password=mongo_password)
-db = client["db"]
-dishesColl = db["dishes"]
-mealsColl = db["meals"]
+    def set_up_meal(self, appetizer_id, main_id, dessert_id):
+        appetizer = self.dishes[appetizer_id]
+        main = self.dishes[main_id]
+        dessert = self.dishes[dessert_id]
+        return appetizer, main, dessert
+
+    def insert_meal(self, meal):
+        appetizer = meal["appetizer"]
+        main = meal["main"]
+        dessert = meal["dessert"]
+        self.counter += 1
+        new_meal = {
+            "name": meal["name"],
+            "ID": self.counter,
+            "appetizer": appetizer["ID"],
+            "main": main["ID"],
+            "dessert": dessert["ID"],
+            "cal": appetizer["cal"] + main["cal"] + dessert["cal"],
+            "sodium": appetizer["sodium"] + main["sodium"] + dessert["sodium"],
+            "sugar": appetizer["sugar"] + main["sugar"] + dessert["sugar"],
+        }
+        self.meals_by_name[meal["name"]] = new_meal
+        self.meals_by_id[self.counter] = new_meal
+
+    def update_meal(self, meal, id):
+        appetizer = meal["appetizer"]
+        main = meal["main"]
+        dessert = meal["dessert"]
+        self.meals_by_id[id] = {
+            "name": meal["name"],
+            "ID": id,
+            "appetizer": appetizer["ID"],
+            "main": main["ID"],
+            "dessert": dessert["ID"],
+            "cal": appetizer["cal"] + main["cal"] + dessert["cal"],
+            "sodium": appetizer["sodium"] + main["sodium"] + dessert["sodium"],
+            "sugar": appetizer["sugar"] + main["sugar"] + dessert["sugar"],
+        }
+        self.meals_by_name[meal["name"]] = self.meals_by_id[id]
+
+MC = mealCollection()
+
 
 class meals(Resource):
     def post(self):
@@ -33,68 +67,50 @@ class meals(Resource):
                 return -1, 400
         
         data = parser.parse_args()
-        doc = mealsColl.find_one({"name": data["name"]})
-        if doc is not None:
+        if data["name"] in MC.meals_by_name:
             return -2, 400
 
-        doc_appetizer = dishesColl.find_one({"_id": int(data["appetizer"])})
-        doc_main = dishesColl.find_one({"_id": int(data["main"])})
-        doc_dessert = dishesColl.find_one({"_id": int(data["dessert"])})
-        if not doc_appetizer or not doc_main or not doc_dessert:
+        if int(data["appetizer"]) not in MC.dishes or int(data["main"]) not in MC.dishes or int(data["dessert"]) not in MC.dishes:
             return -5, 404
-        
-        meal_name = data["name"]
-        new_meal = mealsColl.insert_one({
-            "name": meal_name,
-            "appetizer": doc_appetizer["_id"],
-            "main": doc_main["_id"],
-            "dessert": doc_dessert["_id"],
-            "cal": doc_appetizer["cal"] + doc_main["cal"] + doc_dessert["cal"],
-            "sodium": doc_appetizer["sodium"] + doc_main["sodium"] + doc_dessert["sodium"],
-            "sugar": doc_appetizer["sugar"] + doc_main["sugar"] + doc_dessert["sugar"],
-        })
+        appetizer, main, dessert = MC.set_up_meal(int(data["appetizer"]), int(data["main"]), int(data["dessert"]))
 
-        return new_meal["_id"], 201
+        meal_name = data["name"]
+        meal = {
+            "name": meal_name,
+            "appetizer": appetizer,
+            "main": main,
+            "dessert": dessert
+        }
+        MC.insert_meal(meal)
+        return MC.counter, 201
 
     def get(self):
-        diet = request.args.get('diet')  # Replace 'param_name' with the actual query parameter name
-        if diet is not None:
-            base_url = request.host_url + request.script_root
-            doc_diet = requests.get(base_url, params=diet)
-            response = mealsColl.find({
-                "cal": {"$lte": doc_diet["cals"]},
-                "sodium": {"$lte": doc_diet["sodium"]},
-                "sugar": {"$lte": doc_diet["sugar"]}
-            })
-            return response, 200
-        else:
-            # Query parameter doesn't exist, perform default action
-            return mealsColl.find(), 200
-        
+        return MC.meals_by_id, 200
     
     def delete(self):
         return -1, 400
 
 class mealID(Resource):
+    global MC
+
     def get(self, id):
-        doc = mealsColl.find_one({"_id": id})
-        if doc is None:
+        if id not in MC.meals_by_id:
             return -5, 404
-        return doc["_id"], 200
+        return MC.meals_by_id[id], 200
 
     def delete(self, id):
-        doc = mealsColl.find_one({"_id": id})
-        if doc is None:
+        if id not in MC.meals_by_id:
             return -5, 404
-        mealsColl.delete_one({"_id": id})
+        meal_to_delete = MC.meals_by_id[id]
+        name_of_meal = meal_to_delete["name"]
+        del MC.meals_by_id[id]
+        del MC.meals_by_name[name_of_meal]
         return id, 200
     
     def put(self, id):
         if request.content_type != 'application/json':
             return 0, 415
-        
-        doc = mealsColl.find_one({"_id": id})
-        if doc is None:
+        if id not in MC.meals_by_id:
             return -5, 404
         
         parser = reqparse.RequestParser()  # initialize parse
@@ -108,40 +124,36 @@ class mealID(Resource):
                 return -1, 400
         
         data = parser.parse_args()
-        doc_by_name = mealsColl.find_one({"_id": id})
-        if doc_by_name is not None:
+        if data["name"] in MC.meals_by_name:
             return -2, 400
 
-
-        doc_appetizer = dishesColl.find_one({"_id": int(data["appetizer"])})
-        doc_main = dishesColl.find_one({"_id": int(data["main"])})
-        doc_dessert = dishesColl.find_one({"_id": int(data["dessert"])})
-        if not doc_appetizer or not doc_main or not doc_dessert:
+        if int(data["appetizer"]) not in MC.dishes or int(data["main"]) not in MC.dishes or int(data["dessert"]) not in MC.dishes:
             return -5, 404
+        appetizer, main, dessert = MC.set_up_meal(int(data["appetizer"]), int(data["main"]), int(data["dessert"]))
 
-        updated_meal = mealsColl.update_one({
-            "name": data["name"],
-            "appetizer": doc_appetizer["_id"],
-            "main": doc_main["_id"],
-            "dessert": doc_dessert["_id"],
-            "cal": doc_appetizer["cal"] + doc_main["cal"] + doc_dessert["cal"],
-            "sodium": doc_appetizer["sodium"] + doc_main["sodium"] + doc_dessert["sodium"],
-            "sugar": doc_appetizer["sugar"] + doc_main["sugar"] + doc_dessert["sugar"],
-        })
-
-        return updated_meal["_id"], 200
+        meal_name = data["name"]
+        meal = {
+            "name": meal_name,
+            "appetizer": appetizer,
+            "main": main,
+            "dessert": dessert
+        }
+        MC.update_meal(meal, id)
+        return MC.counter, 201
 
 class mealName(Resource):
+    global MC
+
     def get(self, name):
-        doc = mealsColl.find_one({"name": name})
-        if doc is None:
+        if name not in MC.meals_by_name:
             return -5, 404
-        return doc, 200
+        return MC.meals_by_name[name], 200
 
     def delete(self, name):
-        doc = mealsColl.find_one({"name": name})
-        if doc is None:
+        if name not in MC.meals_by_name:
             return -5, 404
-        id = doc["_id"]
-        mealsColl.delete_one({"name": name})
-        return id, 200
+        meal_to_delete = MC.meals_by_name[name]
+        id_of_meal = meal_to_delete["ID"]
+        del MC.meals_by_id[id_of_meal]
+        del MC.meals_by_name[name]
+        return id_of_meal, 200
