@@ -36,6 +36,7 @@ jobs:
         name: log
         path: log.txt
     - name: Upload artifact
+      if: ${{ job.status == 'success' }}
       uses: actions/upload-artifact@v3
       with:
         name: rest
@@ -74,18 +75,19 @@ jobs:
       run: |
         cd tests
         pytest -v assn3_tests.py > assn3_test_result.txt
+      if: ${{ steps.build.outcome == 'success' }}
     - name: Download log file
       uses: actions/download-artifact@v3
       with:
         name: log
     - name: Check test results
-      if: ${{ job.status == 'success' }}
       run: |
         echo "Tests succeeded" >> log/log.txt
+      if: ${{ job.status == 'success' }}
     - name: Check if tests failed
-      if: ${{ job.status != 'success' }}
       run: |
         echo "Tests failed" >> log/log.txt
+      if: ${{ job.status != 'success' }}
     - name: Upload test results
       if: always()
       uses: actions/upload-artifact@v3
@@ -96,4 +98,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: log
-        path: log.txt
+        path: log/log.txt
