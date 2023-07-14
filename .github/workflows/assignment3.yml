@@ -49,7 +49,7 @@ jobs:
     - name: Download artifact
       uses: actions/download-artifact@v3
       with:
-        name: assn3
+        name: rest
     - name: Load Docker images from previous workflows
       run: docker load --input rest/image.tar
     - name: Check rest image is loaded
@@ -81,11 +81,11 @@ jobs:
     - name: Check test results
       if: ${{ job.status == 'success' }}
       run: |
-        echo "Tests succeeded" >> ../log.txt
+        echo "Tests succeeded" >> log/log.txt
     - name: Check if tests failed
       if: ${{ job.status != 'success' }}
       run: |
-        echo "Tests failed" >> ../log.txt
+        echo "Tests failed" >> log/log.txt
     - name: Upload test results
       if: always()
       uses: actions/upload-artifact@v3
