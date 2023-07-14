@@ -35,11 +35,11 @@ jobs:
       with:
         name: log
         path: log.txt
-    - name: Upload log file
+    - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
-        name: log
-        path: log.txt
+        name: assn3
+        path: /tmp/image.tar
 
   test:
     name: Test
@@ -49,7 +49,7 @@ jobs:
     - name: Download artifact
       uses: actions/download-artifact@v3
       with:
-        name: log
+        name: assn3
     - name: Load Docker images from previous workflows
       run: docker load --input rest/image.tar
     - name: Check rest image is loaded
@@ -97,21 +97,3 @@ jobs:
       with:
         name: log
         path: log.txt
-
-
-
-#     The following steps will only execute if tests succeeded
-    # - name: Set DATE
-    #   run: echo "DATE=$(date -I)" >> $GITHUB_ENV
-    # - name: Log in to Docker Hub
-    #   uses: docker/login-action@v2
-    #   with:
-    #     username: ${{ secrets.DOCKER_USERNAME }}
-    #     password: ${{ secrets.DOCKER_PASSWORD }}
-    # - name: push image with "latest" and date tags to DH
-    #   run: |
-    #     docker push ${{ secrets.DOCKER_COURSE_USERNAME }}/wordsvr-v2
-    #     docker tag ${{ secrets.DOCKER_COURSE_USERNAME }}/wordsvr-v2 \
-    #     ${{ secrets.DOCKER_COURSE_USERNAME }}/wordsvr-v2:${{ env.DATE }}
-    #     docker push \
-    #     ${{ secrets.DOCKER_COURSE_USERNAME }}/wordsvr-v2:${{ env.DATE }}
