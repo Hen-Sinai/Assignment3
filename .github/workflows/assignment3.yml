@@ -13,7 +13,7 @@ jobs:
     - name: Generate log file
       run: |
         echo "$(date -Iminutes)" > log.txt
-        echo "Your Name(s)" >> log.txt
+        echo "Hen Sinai" >> log.txt
     - name: Build and export
       id: build
       uses: docker/build-push-action@v3
@@ -34,7 +34,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: log
-        path: log.txt
+        path: /log.txt
     - name: Upload artifact
       if: ${{ job.status == 'success' }}
       uses: actions/upload-artifact@v3
