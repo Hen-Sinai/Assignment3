@@ -12,8 +12,8 @@ jobs:
       uses: docker/setup-buildx-action@v2
     - name: Generate log file
       run: |
-        echo "$(date -Iminutes)" > log.txt
-        echo "Hen Sinai" >> log.txt
+        echo "$(date -Iminutes)" >> /tmp/log.txt
+        echo "Hen Sinai" >> /tmp/log.txt
     - name: Build and export
       id: build
       uses: docker/build-push-action@v3
@@ -34,7 +34,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: log
-        path: ./log.txt
+        path: /tmp/log.txt
     - name: Upload artifact
       if: ${{ job.status == 'success' }}
       uses: actions/upload-artifact@v3
@@ -51,6 +51,7 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: rest
+        path: /tmp
     - name: Load Docker images from previous workflows
       run: docker load --input rest/image.tar
     - name: Check rest image is loaded
@@ -80,13 +81,14 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: log
+        path: /tmp
     - name: Check test results
       run: |
-        echo "Tests succeeded" >> log/log.txt
+        echo "Tests succeeded" >> /tmp/log.txt
       if: ${{ job.status == 'success' }}
     - name: Check if tests failed
       run: |
-        echo "Tests failed" >> log/log.txt
+        echo "Tests failed" >> /tmp/log.txt
       if: ${{ job.status != 'success' }}
     - name: Upload test results
       if: always()
@@ -98,4 +100,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: log
-        path: log/log.txt
+        path: /tmp/log.txt
